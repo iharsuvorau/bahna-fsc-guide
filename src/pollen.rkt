@@ -1,7 +1,7 @@
 #lang racket/base
 
-(require 
-	pollen/core
+(require
+    pollen/core
     pollen/decode
     pollen/setup
     racket/date
@@ -40,7 +40,7 @@
 
 (define (heading . elements)
 	(case (current-poly-target)
-		[(ltx pdf) (apply string-append `("\\section{" ,@elements "}"))]
+		[(ltx pdf) (apply string-append `("\\chapter{" ,@elements "}"))]
 		[else (txexpr 'h2 empty elements)]))
 
 (define (em . elements)
@@ -65,15 +65,6 @@ code as a valid X-expression rather than as a string.
         (get-elements xs)
         xs))
 
-(define (hyperlink-decoder inline-tx)
-  (define (hyperlinker url . words)
-    (case (current-poly-target)
-      [(ltx pdf) `(txt "\\href{" ,url "}" "{" ,@words "}")]
-      [else `(a [[href ,url]] ,@words)]))
-  (if (eq? 'hyperlink (get-tag inline-tx))
-      (apply hyperlinker (get-elements inline-tx))
-      inline-tx))
-
 #|
 detect-newthoughts: called by root above when targeting HTML.
 The ◊newthought tag (defined further below) makes use of the \newthought
@@ -93,3 +84,167 @@ handle it at the Pollen processing level.
           (findf-txexpr block-xpr is-newthought?)) ; Does it contain a <span class="newthought">?
       (attr-set block-xpr 'class "pause-before")   ; Add the ‘pause-before’ class
       block-xpr))                                  ; Otherwise return it unmodified
+
+#|
+◊numbered-note, ◊margin-figure, ◊margin-note:
+  These three tag functions produce markup for "sidenotes" in HTML and LaTeX.
+  In our LaTeX template, any hyperlinks also get auto-converted to numbered
+  sidenotes, which is kinda neat. Unfortunately, this also means that when
+  targeting LaTeX, you can't have a hyperlink inside a sidenote since that would
+  equate to a sidenote within a sidenote, which causes Problems.
+
+  We handle this by not using a normal tag function for hyperlinks. Instead,
+  within these three tag functions we call latex-no-hyperlinks-in-margin to
+  filter out any hyperlinks inside these tags (for LaTeX/PDF only). Then the
+  root function uses a separate decoder to properly handle any hyperlinks that
+  sit outside any of these three tags.
+|#
+
+(define (numbered-note . text)
+    (define refid (number->string (equal-hash-code (car text))))
+    (case (current-poly-target)
+      [(ltx pdf)
+       `(txt "\\footnote{" ,@(latex-no-hyperlinks-in-margin text) "}")]
+      [else
+        `(@ (label [[for ,refid] [class "margin-toggle sidenote-number"]])
+            (input [[type "checkbox"] [id ,refid] [class "margin-toggle"]])
+            (span [(class "sidenote")] ,@text))]))
+
+(define (margin-figure source . caption)
+    (define refid (number->string (equal-hash-code source)))
+    (case (current-poly-target)
+      [(ltx pdf)
+       `(txt "\\begin{marginfigure}"
+             "\\includegraphics{" ,source "}"
+             "\\caption{" ,@(latex-no-hyperlinks-in-margin caption) "}"
+             "\\end{marginfigure}")]
+      [else
+        `(@ (label [[for ,refid] [class "margin-toggle"]] 8853)
+            (input [[type "checkbox"] [id ,refid] [class "margin-toggle"]])
+            (span [[class "marginnote"]] (img [[src ,source]]) ,@caption))]))
+
+(define (margin-note . text)
+    (define refid (number->string (equal-hash-code (car text))))
+    (case (current-poly-target)
+      [(ltx pdf)
+       `(txt "\\marginnote{" ,@(latex-no-hyperlinks-in-margin text) "}")]
+      [else
+        `(@ (label [[for ,refid] [class "margin-toggle"]] 8853)
+            (input [[type "checkbox"] [id ,refid] [class "margin-toggle"]])
+            (span [[class "marginnote"]] ,@text))]))
+#|
+  This function is called from within the margin/sidenote functions when
+  targeting Latex/PDF, to filter out hyperlinks from within those tags.
+  (See notes above)
+|#
+(define (latex-no-hyperlinks-in-margin txpr)
+  ; First define a local function that will transform each ◊hyperlink
+  (define (cleanlinks inline-tx)
+      (if (eq? 'hyperlink (get-tag inline-tx))
+        `(txt ,@(cdr (get-elements inline-tx))
+              ; Return the text with the URI in parentheses
+              " (\\url{" ,(ltx-escape-str (car (get-elements inline-tx))) "})")
+        inline-tx)) ; otherwise pass through unchanged
+  ; Run txpr through the decode-elements wringer using the above function to
+  ; flatten out any ◊hyperlink tags
+  (decode-elements txpr #:inline-txexpr-proc cleanlinks))
+
+(define (hyperlink-decoder inline-tx)
+  (define (hyperlinker url . words)
+    (case (current-poly-target)
+      [(ltx pdf) `(txt "\\href{" ,url "}" "{" ,@words "}")]
+      [else `(a [[href ,url]] ,@words)]))
+
+  (if (eq? 'hyperlink (get-tag inline-tx))
+      (apply hyperlinker (get-elements inline-tx))
+      inline-tx))
+
+(define (p . words)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt ,@words)]
+    [else `(p ,@words)]))
+
+(define (blockquote . words)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\begin{quote}" ,@words "\\end{quote}")]
+    [else `(blockquote ,@words)]))
+
+(define (newthought . words)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\newthought{" ,@words "}")]
+    [else `(span [[class "newthought"]] ,@words)]))
+
+(define (smallcaps . words)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\smallcaps{" ,@words "}")]
+    [else `(span [[class "smallcaps"]] ,@words)]))
+
+(define (∆ . elems)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt-noescape "$" ,@elems "$")]
+    [else `(span "\\(" ,@elems "\\)")]))
+
+(define (center . words)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\begin{center}" ,@words "\\end{center}")]
+    [else `(div [[style "text-align: center"]] ,@words)]))
+
+(define (section title . text)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\section*{" ,title "}"
+                 "\\label{sec:" ,title ,(symbol->string (gensym)) "}"
+                 ,@text)]
+    [else `(section (h2 ,title) ,@text)]))
+
+(define (index-entry entry . text)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\index{" ,entry "}" ,@text)]
+    [else
+      (case (apply string-append text)
+        [("") `(a [[id ,entry] [class "index-entry"]])]
+        [else `(a [[id ,entry] [class "index-entry"]] ,@text)])]))
+
+(define (figure source #:fullwidth [fullwidth #f] . caption)
+  (case (current-poly-target)
+    [(ltx pdf)
+     (define figure-env (if fullwidth "figure*" "figure"))
+     `(txt "\\begin{" ,figure-env "}"
+           "\\includegraphics{" ,source "}"
+           "\\caption{" ,@(latex-no-hyperlinks-in-margin caption) "}"
+           "\\end{" ,figure-env "}")]
+    [else (if fullwidth
+              ; Note the syntax for calling another tag function, margin-note,
+              ; from inside this one. Because caption is a list, we need to use
+              ; (apply) to pass the values in that list as individual arguments.
+              `(figure [[class "fullwidth"]] ,(apply margin-note caption) (img [[src ,source]]))
+              `(figure ,(apply margin-note caption) (img [[src ,source]])))]))
+
+(define (code . text)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\texttt{" ,@text "}")]
+    [else `(span [[class "code"]] ,@text)]))
+
+(define (blockcode . text)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\begin{verbatim}" ,@text "\\end{verbatim}")]
+    [else `(pre [[class "code"]] ,@text)]))
+
+(define (ol . elements)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\begin{enumerate}" ,@elements "\\end{enumerate}")]
+    [else `(ol ,@elements)]))
+
+(define (ul . elements)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\begin{itemize}" ,@elements "\\end{itemize}")]
+    [else `(ul ,@elements)]))
+
+(define (li . elements)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\item " ,@elements)]
+    [else `(li ,@elements)]))
+
+(define (sup . text)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\textsuperscript{" ,@text "}")]
+    [else `(sup ,@text)]))
