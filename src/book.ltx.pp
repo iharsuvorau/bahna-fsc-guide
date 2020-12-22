@@ -2,6 +2,7 @@
 
 ◊(local-require
   racket/base
+  racket/list
   pollen/pagetree)
 
 ◊(define (print-body doc)
@@ -43,6 +44,7 @@
                \usepackage{textcomp}
                \usepackage{framed}
                \usepackage[htt]{hyphenat}
+               \usepackage{soul} % for underlined text
                %\usepackage[usenames,dvipsnames]{color}
                %\hypersetup{bookmarks=true,bookmarksopen=true,bookmarksnumbered=true}
 
@@ -50,7 +52,8 @@
 
                ◊(apply string-append
                        (map print-body
-                            (children 'pagetree-root (dynamic-require "index.ptree" 'doc))))
+                            (children 'pagetree-root (dynamic-require "index.ptree" 'doc)))
+                       )
 
                \end{document}
                }

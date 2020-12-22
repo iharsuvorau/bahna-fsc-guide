@@ -22,20 +22,26 @@
   (case (current-poly-target)
     [(ltx pdf)
      (define first-pass (decode-elements elements
-                                         #:inline-txexpr-proc (compose1 txt-decode hyperlink-decoder)
-                                         #:string-proc (compose1 ltx-escape-str smart-quotes smart-dashes)
+                                         #:inline-txexpr-proc (compose1 txt-decode
+					;hyperlink-decoder
+									)
+					;#:string-proc (compose1 ltx-escape-str smart-quotes smart-dashes)
+					 ;#:txexpr-elements-proc decode-linebreaks
+					 #:string-proc (compose1 ltx-escape-str)
                                          #:exclude-tags '(script style figure txt-noescape)))
-     (make-txexpr 'body null (decode-elements first-pass #:inline-txexpr-proc txt-decode))]
+     (make-txexpr 'body null
+		  (decode-elements first-pass #:inline-txexpr-proc txt-decode))]
 
     [else
       (define first-pass (decode-elements elements
-                                          #:txexpr-elements-proc decode-paragraphs
+                                          #:txexpr-elements-proc (compose1 decode-linebreaks
+									   decode-paragraphs)
                                           #:exclude-tags '(script style figure)))
       (make-txexpr 'body null
                    (decode-elements first-pass
                                     #:block-txexpr-proc detect-newthoughts
-                                    #:inline-txexpr-proc hyperlink-decoder
-                                    #:string-proc (compose1 smart-quotes smart-dashes)
+                                    ;#:inline-txexpr-proc hyperlink-decoder
+					;#:string-proc (compose1 smart-quotes smart-dashes)
                                     #:exclude-tags '(script style)))]))
 
 (define (heading . elements)
@@ -52,7 +58,7 @@
 ; The approach here is rather indiscriminate; I’ll probably have to change
 ; it once I get around to handline inline math, etc.
 (define (ltx-escape-str str)
-  (regexp-replace* #px"([$#%&])" str "\\\\\\1"))
+  (regexp-replace* #px"([$#%&_])" str "\\\\\\1"))
 
 #|
 `txt` is called by root when targeting LaTeX/PDF. It converts all elements inside
@@ -110,6 +116,45 @@ handle it at the Pollen processing level.
             (input [[type "checkbox"] [id ,refid] [class "margin-toggle"]])
             (span [(class "sidenote")] ,@text))]))
 
+(define (margin-figure-small source . caption)
+    (define refid (number->string (equal-hash-code source)))
+    (case (current-poly-target)
+      [(ltx pdf)
+       `(txt "\\begin{marginfigure}"
+             "\\includegraphics[width=2.5cm]{" ,source "}"
+             "\\caption{" ,@(latex-no-hyperlinks-in-margin caption) "}"
+             "\\end{marginfigure}")]
+      [else
+        `(@ (label [[for ,refid] [class "margin-toggle"]] 8853)
+            (input [[type "checkbox"] [id ,refid] [class "margin-toggle"]])
+            (span [[class "marginnote"]] (img [[src ,source]]) ,@caption))]))
+
+(define (margin-figure-medium source . caption)
+    (define refid (number->string (equal-hash-code source)))
+    (case (current-poly-target)
+      [(ltx pdf)
+       `(txt "\\begin{marginfigure}"
+             "\\includegraphics[width=3.5cm]{" ,source "}"
+             "\\caption{" ,@(latex-no-hyperlinks-in-margin caption) "}"
+             "\\end{marginfigure}")]
+      [else
+        `(@ (label [[for ,refid] [class "margin-toggle"]] 8853)
+            (input [[type "checkbox"] [id ,refid] [class "margin-toggle"]])
+            (span [[class "marginnote"]] (img [[src ,source]]) ,@caption))]))
+
+(define (margin-figure-big source . caption)
+    (define refid (number->string (equal-hash-code source)))
+    (case (current-poly-target)
+      [(ltx pdf)
+       `(txt "\\begin{marginfigure}"
+             "\\includegraphics[width=5cm]{" ,source "}"
+             "\\caption{" ,@(latex-no-hyperlinks-in-margin caption) "}"
+             "\\end{marginfigure}")]
+      [else
+        `(@ (label [[for ,refid] [class "margin-toggle"]] 8853)
+            (input [[type "checkbox"] [id ,refid] [class "margin-toggle"]])
+            (span [[class "marginnote"]] (img [[src ,source]]) ,@caption))]))
+
 (define (margin-figure source . caption)
     (define refid (number->string (equal-hash-code source)))
     (case (current-poly-target)
@@ -149,15 +194,15 @@ handle it at the Pollen processing level.
   ; flatten out any ◊hyperlink tags
   (decode-elements txpr #:inline-txexpr-proc cleanlinks))
 
-(define (hyperlink-decoder inline-tx)
-  (define (hyperlinker url . words)
-    (case (current-poly-target)
-      [(ltx pdf) `(txt "\\href{" ,url "}" "{" ,@words "}")]
-      [else `(a [[href ,url]] ,@words)]))
+;; (define (hyperlink-decoder inline-tx)
+;;   (define (hyperlinker url . words)
+;;     (case (current-poly-target)
+;;       [(ltx pdf) `(txt "\\href{" ,url "}" "{" ,@words "}")]
+;;       [else `(a [[href ,url]] ,@words)]))
 
-  (if (eq? 'hyperlink (get-tag inline-tx))
-      (apply hyperlinker (get-elements inline-tx))
-      inline-tx))
+;;   (if (eq? 'hyperlink (get-tag inline-tx))
+;;       (apply hyperlinker (get-elements inline-tx))
+;;       inline-tx))
 
 (define (p . words)
   (case (current-poly-target)
@@ -196,6 +241,13 @@ handle it at the Pollen processing level.
                  ,@text)]
     [else `(section (h2 ,title) ,@text)]))
 
+(define (subsection title . text)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\subsection*{" ,title "}"
+                 "\\label{sec:" ,title ,(symbol->string (gensym)) "}"
+                 ,@text)]
+    [else `(section (h3 ,title) ,@text)]))
+
 (define (index-entry entry . text)
   (case (current-poly-target)
     [(ltx pdf) `(txt "\\index{" ,entry "}" ,@text)]
@@ -209,7 +261,7 @@ handle it at the Pollen processing level.
     [(ltx pdf)
      (define figure-env (if fullwidth "figure*" "figure"))
      `(txt "\\begin{" ,figure-env "}"
-           "\\includegraphics{" ,source "}"
+           "\\includegraphics[width=\\linewidth]{" ,source "}"
            "\\caption{" ,@(latex-no-hyperlinks-in-margin caption) "}"
            "\\end{" ,figure-env "}")]
     [else (if fullwidth
@@ -248,3 +300,48 @@ handle it at the Pollen processing level.
   (case (current-poly-target)
     [(ltx pdf) `(txt "\\textsuperscript{" ,@text "}")]
     [else `(sup ,@text)]))
+
+(define (hyperlink url . text)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\href{" ,url "}" "{\\ul{" ,@text "}}")]
+    [else `(a [[href ,url]] ,@text)]))
+
+(define (br)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\")]
+    [else `(br)]))
+
+(define (i . text)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "{\\itshape " ,@text "}")]
+    [else `(i ,@text)]))
+
+(define (emph . text)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\emph{" ,@text "}")]
+    [else `(em ,@text)]))
+
+(define (b . text)
+  (case (current-poly-target)
+    [(ltf pdf) `(txt "{\\bfseries " ,@text "}")]
+    [else `(b ,@text)]))
+
+(define (strong . text)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\textbf{" ,@text "}")]
+    [else `(strong ,@text)]))
+
+(define (fullwidth . words)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\begin{fullwidth}" ,@words "\\end{fullwidth}")]
+    [else `(div [[class "fullwidth"]] ,@words)]))
+
+(define (additional-materials . text)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\fbox{\\parbox{\\linewidth}{\\footnotesize{" ,@text "}}}")]
+    [else `(div [[class "additional-materials"]] ,@text)]))
+
+(define (small . text)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\small{" ,@text "}}")]
+    [else `(small ,@text)]))
