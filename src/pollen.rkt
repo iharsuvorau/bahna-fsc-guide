@@ -155,6 +155,19 @@ handle it at the Pollen processing level.
             (input [[type "checkbox"] [id ,refid] [class "margin-toggle"]])
             (span [[class "marginnote"]] (img [[src ,source]]) ,@caption))]))
 
+(define (margin-figure-big-bordered source . caption)
+    (define refid (number->string (equal-hash-code source)))
+    (case (current-poly-target)
+      [(ltx pdf)
+       `(txt "\\begin{marginfigure}"
+             "\\fbox{\\includegraphics[width=5cm]{" ,source "}}"
+             "\\caption{" ,@(latex-no-hyperlinks-in-margin caption) "}"
+             "\\end{marginfigure}")]
+      [else
+        `(@ (label [[for ,refid] [class "margin-toggle"]] 8853)
+            (input [[type "checkbox"] [id ,refid] [class "margin-toggle"]])
+            (span [[class "marginnote"]] (img [[src ,source]]) ,@caption))]))
+
 (define (margin-figure source . caption)
     (define refid (number->string (equal-hash-code source)))
     (case (current-poly-target)
@@ -221,7 +234,7 @@ handle it at the Pollen processing level.
 
 (define (smallcaps . words)
   (case (current-poly-target)
-    [(ltx pdf) `(txt "\\smallcaps{" ,@words "}")]
+    [(ltx pdf) `(txt "\\sc{" ,@words "}")]
     [else `(span [[class "smallcaps"]] ,@words)]))
 
 (define (∆ . elems)
@@ -303,7 +316,7 @@ handle it at the Pollen processing level.
 
 (define (hyperlink url . text)
   (case (current-poly-target)
-    [(ltx pdf) `(txt "\\href{" ,url "}" "{\\ul{" ,@text "}}")]
+    [(ltx pdf) `(txt "\\href{" ,url "}" "{" ,@text "}")]
     [else `(a [[href ,url]] ,@text)]))
 
 (define (br)
@@ -338,10 +351,27 @@ handle it at the Pollen processing level.
 
 (define (additional-materials . text)
   (case (current-poly-target)
-    [(ltx pdf) `(txt "\\fbox{\\parbox{\\linewidth}{\\footnotesize{" ,@text "}}}")]
+    [(ltx pdf) `(txt "\\par\\noindent\\rule{\\linewidth}{0.1pt}\\
+\\noindent{" ,@text "}\\vspace{-2mm}
+\\par\\noindent\\rule{\\linewidth}{0.1pt}\\par\\smallskip")]
     [else `(div [[class "additional-materials"]] ,@text)]))
 
 (define (small . text)
   (case (current-poly-target)
     [(ltx pdf) `(txt "\\small{" ,@text "}}")]
     [else `(small ,@text)]))
+
+(define (boxed . text)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\vspace{3mm}\\fbox{\\parbox{0.9\\textwidth}{\\small{" ,@text "}}}\\vspace{3mm}")]
+    [else `(div [[class "boxed"]] ,@text)]))
+
+(define (paragraph . text)
+  (case (current-poly-target)
+    [(ltx pdf) `(txt "\\paragraph{" ,@text "}")]
+    [else `(div [[class "paragraph-heading"]] ,@text)]))
+
+;; (define (epigraph author . text)
+;;   (case (current-poly-target)
+;;     [(ltx pdf) `(txt "\\openepigraph{" ,@text "}{" ,author "}")]
+;;     [else `(div [[class "additional-materials"]] ,@text)]))
