@@ -47,7 +47,7 @@
 (define (heading . elements)
 	(case (current-poly-target)
 		[(ltx pdf) (apply string-append `("\\chapter{" ,@elements "}"))]
-		[else (txexpr 'h2 empty elements)]))
+		[else (txexpr 'h1 empty elements)]))
 
 (define (em . elements)
 	(case (current-poly-target)
@@ -127,7 +127,7 @@ handle it at the Pollen processing level.
       [else
         `(@ (label [[for ,refid] [class "margin-toggle"]] 8853)
             (input [[type "checkbox"] [id ,refid] [class "margin-toggle"]])
-            (span [[class "marginnote"]] (img [[src ,source]]) ,@caption))]))
+            (span [[class "marginnote marginnote-small"]] (img [[src ,source]]) ,@caption))]))
 
 (define (margin-figure-medium source . caption)
     (define refid (number->string (equal-hash-code source)))
@@ -140,7 +140,7 @@ handle it at the Pollen processing level.
       [else
         `(@ (label [[for ,refid] [class "margin-toggle"]] 8853)
             (input [[type "checkbox"] [id ,refid] [class "margin-toggle"]])
-            (span [[class "marginnote"]] (img [[src ,source]]) ,@caption))]))
+            (span [[class "marginnote marginnote-medium"]] (img [[src ,source]]) ,@caption))]))
 
 (define (margin-figure-big source . caption)
     (define refid (number->string (equal-hash-code source)))
@@ -248,18 +248,20 @@ handle it at the Pollen processing level.
     [else `(div [[style "text-align: center"]] ,@words)]))
 
 (define (section title . text)
+  (define id (gensym))
   (case (current-poly-target)
     [(ltx pdf) `(txt "\\section*{" ,title "}"
-                 "\\label{sec:" ,title ,(symbol->string (gensym)) "}"
+                 "\\label{sec:" ,title ,(symbol->string id) "}"
                  ,@text)]
-    [else `(section (h2 ,title) ,@text)]))
+    [else `(section (h2 ((id ,(symbol->string id))) ,title) ,@text)]))
 
 (define (subsection title . text)
+  (define id (gensym))
   (case (current-poly-target)
     [(ltx pdf) `(txt "\\subsection*{" ,title "}"
                  "\\label{sec:" ,title ,(symbol->string (gensym)) "}"
                  ,@text)]
-    [else `(section (h3 ,title) ,@text)]))
+    [else `(section (h3 ((id ,(symbol->string id))) ,title) ,@text)]))
 
 (define (index-entry entry . text)
   (case (current-poly-target)
@@ -369,7 +371,7 @@ handle it at the Pollen processing level.
 (define (paragraph . text)
   (case (current-poly-target)
     [(ltx pdf) `(txt "\\paragraph{" ,@text "}")]
-    [else `(div [[class "paragraph-heading"]] ,@text)]))
+    [else `(span [[class "paragraph"]] ,@text)]))
 
 ;; (define (epigraph author . text)
 ;;   (case (current-poly-target)
