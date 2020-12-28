@@ -8,6 +8,8 @@
 	<link rel="stylesheet" href="/css/joel.css"/>
     </head>
     <body>
+	◊(define prev-page (previous here))
+	◊(define next-page (next here))
 	<header class="site-header">
 	    <nav>
 		<a href="https://bahna.land/">bahna.land</a>
@@ -17,17 +19,30 @@
 		</a>
 	    </nav>
 	    <nav>
-		◊(define prev-page (previous here))
-		◊(define next-page (next here))
 		◊when/splice[prev-page]{
 		<a href="◊|prev-page|">&larr; Назад</a>}
-		◊when/splice[next-page]{
 		<a href="/">&uarr; На главную</a>
+		◊when/splice[next-page]{
 		<a href="◊|next-page|">Вперёд &rarr;</a>}
 	    </nav>
 	</header>
 	<article>
 	    ◊(->html doc)
 	</article>
+	<footer>
+	    ◊when/splice[prev-page]{
+	    <div onclick="document.location.pathname='◊|next-page|';">
+		<a href="◊|prev-page|">&larr; Назад</a>
+		<span>◊(select-from-doc 'h1 (previous here))</span>
+	    </div>}
+	    <div onclick="document.location.pathname='/';">
+		<a href="/">&uarr; На главную</a>
+	    </div>
+	    ◊when/splice[next-page]{
+	    <div onclick="document.location.pathname='◊|next-page|';">
+		<a href="◊|next-page|">Вперёд &rarr;<br></a>
+		<span>◊(select-from-doc 'h1 (next here))</span>
+	    </div>}
+	</footer>
     </body>
 </html>
