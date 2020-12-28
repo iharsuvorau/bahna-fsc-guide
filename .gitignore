@@ -2,8 +2,9 @@ tmp
 .DS_Store
 *~
 compiled
-*.ltx
-*.pdf
-*.html
+src/*.ltx
+src/*.pdf
+src/*.html
 pollen-latex-work
 input
+.idea
