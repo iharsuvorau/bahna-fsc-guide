@@ -1,11 +1,15 @@
 ◊(require txexpr)
 <!DOCTYPE html>
-<html lang="en">
-    <head>
+<html lang="ru">
+    <head profile="http://www.w3.org/2005/10/profile">
 	<meta charset="utf-8"/>
 	<title>◊(when (select 'h2 doc) (select 'h2 doc)) &mdash; Сохранить леса Беларуси: Практическое руководство</title>
-	<link rel="stylesheet" href="/css/tufte.css"/>
-	<link rel="stylesheet" href="/css/joel.css"/>
+	<link rel="stylesheet" href="/assets/tufte.css"/>
+	<link rel="stylesheet" href="/assets/main.css"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" 
+	      type="image/png" 
+	      href="/assets/favicon.png">
     </head>
     <body>
 	◊(define prev-page (previous here))
@@ -14,7 +18,7 @@
 	    <nav>
 		<a href="https://bahna.land/">bahna.land</a>
 		<a href="/book.pdf" class="with-icon">
-		    <img src="css/pdficon.png" height="15" width="15" style="width:auto" alt="Скачать PDF" />
+		    <img src="/assets/pdficon.png" height="15" width="15" style="width:auto" alt="Скачать PDF" />
 		    <span>PDF-версия</span>
 		</a>
 	    </nav>
