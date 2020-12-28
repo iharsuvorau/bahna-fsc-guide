@@ -147,6 +147,7 @@ a {
   text-decoration: underline;
   text-decoration-style: solid;
   text-decoration-thickness: 0.1px;
+  transition: all 0.2s ease-in-out;
 }
 
 a:hover {
@@ -161,7 +162,7 @@ article a, section a {
 .list-circle { list-style-type: circle; }
 
 .site-header {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
@@ -171,7 +172,7 @@ article a, section a {
   justify-content: space-between;
 
   font-family: sans-serif;
-  font-size: .8rem;
+  font-size: .85rem;
 }
 
 .site-header nav {
@@ -193,7 +194,12 @@ article a, section a {
   margin: .5rem;
   text-decoration: none;
   text-transform: uppercase;
-  letter-spacing: .1ex;
+  letter-spacing: .2ex;
+  //color: blue;
+}
+
+.site-header nav a:hover, .site-header nav a:active {
+  color: blue;
 }
 
 .article-nav {
@@ -228,9 +234,9 @@ article a, section a {
 
 article {
   position: relative;
-  margin: 10rem 0;
+  margin: 10rem 0 0 0;
   padding: 0 0 10rem 0;
-  border-top: 5px double black;
+  border-top: 6px double black;
 }
 
 .index-page article {
@@ -323,4 +329,44 @@ li ul, li ol {
 
 blockquote .sidenote, blockquote .marginnote, li .sidenote, li .marginnote {
   margin-right: -72.5%;
+}
+
+footer {
+  display: flex;
+  width: 100%;
+  font-family: sans-serif;
+  font-size: .85rem;
+  line-height: 1.2rem;
+  //border-top: 1px solid black;
+}
+
+footer div {
+  padding: 1rem;
+  border-top: 1px solid black;
+  border-right: 1px solid black;
+  min-width: 5rem;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+footer div:hover, footer div:active {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+footer div a {
+  text-transform: uppercase;
+  letter-spacing: .1ex;
+  text-decoration: none;
+  margin-bottom: .5rem;
+  word-break: break-word;
+}
+
+footer div:last-of-type {
+  border-right: none;
+  flex: 1 0 auto;
 }

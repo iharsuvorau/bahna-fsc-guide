@@ -2,12 +2,15 @@
 
 <!DOCTYPE html>
 <html lang="en">
-    <head>
+    <head profile="http://www.w3.org/2005/10/profile">
 	<meta charset="utf-8"/>
 	<title>◊(hash-ref metas 'title)</title>
 	<link rel="stylesheet" href="css/tufte.css"/>
 	<link rel="stylesheet" href="css/joel.css"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="icon" 
+	      type="image/png" 
+	      href="/favicon.png">
     </head>
     <body class="index-page">
 	<header class="site-header">
